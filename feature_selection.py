@@ -20,13 +20,7 @@ def read_data():
                 DATA[cat] = set()
                 DATA[cat].add(doc)
             else:
-                # print(type(DATA.get(cat)))
                 DATA.get(cat).add(doc)
-
-            # pprint.pprint(DATA.keys())
-            # cnt += 1
-            # if cnt >= 10000:
-            #     sys.exit()
 
 
 def info_gain(data):
