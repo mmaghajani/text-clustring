@@ -58,25 +58,26 @@ def info_gain():
         for cat in DATA.keys():
             Ni = len(DATA.get(cat))
             if Ni is not 0:
-                a += ((Ni/N) * math.log2(Ni/N))
+                a += ((Ni / N) * math.log2(Ni / N))
         b = 0.000000
         for cat in DATA.keys():
             Niw = WORD_DATA.get(word)[cat]
             if Niw is not 0:
-                b += ((Niw/Nw) * math.log2(Niw/Nw))
+                b += ((Niw / Nw) * math.log2(Niw / Nw))
         c = 0.000000
         for cat in DATA.keys():
             Ni = len(DATA.get(cat))
             Niw = WORD_DATA.get(word)[cat]
             Niwbar = Ni - Niw
             if Niwbar is not 0:
-                c += ((Niwbar/Nwbar) * math.log2(Niwbar/Nwbar))
+                c += ((Niwbar / Nwbar) * math.log2(Niwbar / Nwbar))
         Pw = Nw / N
         Pwbar = Nwbar / N
         IGs[word] = -a + Pw * b + Pwbar * c
     IGs = sorted(IGs.items(), key=lambda x: x[1], reverse=True)
     with open("info_gain.txt", "w") as f:
         cnt = 0
+        f.write("score" + "\t\t\t\t\t\t" + "word\n")
         while cnt < 100:
             f.write(str(IGs[cnt][1]) + "\t\t\t" + IGs[cnt][0] + "\n")
             cnt += 1
@@ -102,16 +103,14 @@ def mutual_info():
             c = 0.0000000000
             d = 0.0000000000
             if Niw is not 0:
-                a = (Niw/N) * math.log2((N*Niw)/(Nw*Ni))
+                a = (Niw / N) * math.log2((N * Niw) / (Nw * Ni))
             if Niwbar is not 0:
-                b = (Niwbar/N) * math.log2((N*Niwbar)/(Nwbar*Ni))
+                b = (Niwbar / N) * math.log2((N * Niwbar) / (Nwbar * Ni))
             if Nibarw is not 0:
-                c = (Nibarw/N) * math.log2((N*Nibarw)/(Nw*Nibar))
+                c = (Nibarw / N) * math.log2((N * Nibarw) / (Nw * Nibar))
             if Nibarwbar is not 0:
-                d = (Nibarwbar/N) * math.log2((N*Nibarwbar)/(Nwbar*Nibar))
+                d = (Nibarwbar / N) * math.log2((N * Nibarwbar) / (Nwbar * Nibar))
             MI = a + b + c + d
-            if MI < 0.0001:
-                MI = MI
             if word not in MIs.keys():
                 MIs[word] = {cat: MI}
             else:
@@ -119,7 +118,7 @@ def mutual_info():
         s = 0
         for cat in DATA.keys():
             Ni = len(DATA.get(cat))
-            Pci = Ni/N
+            Pci = Ni / N
             s += (MIs.get(word)[cat] * Pci)
         score[word] = s
     MIs = dict(map(lambda x: (x[0], (score[x[0]],
@@ -127,7 +126,7 @@ def mutual_info():
     MIs = sorted(MIs.items(), key=lambda x: x[1][0], reverse=True)
     with open("mutual_info.txt", "w") as f:
         cnt = 0
-        f.write("class" + "\t\t\t" + "max class" + "\t\t\t" + "score" + "\t\t\t" + "word\n")
+        f.write("max class" + "\t\t" + "max class score" + "\t\t\t\t" + "score" + "\t\t\t\t\t\t" + "word\n")
         while cnt < 100:
             f.write(str(MIs[cnt][1][1][0]) + "\t\t\t" + str(MIs[cnt][1][1][1]) +
                     "\t\t\t" + str(MIs[cnt][1][0]) + "\t\t\t" + MIs[cnt][0] + "\n")
@@ -135,13 +134,48 @@ def mutual_info():
         f.close()
 
 
-
 def X_square():
-    return None
+    Xs = dict()
+    N = 8600
+    score = dict()
+    for word in WORD_DATA.keys():
+        Nw = WORD_DATA.get(word)["all"]
+        for cat in DATA.keys():
+            Ni = len(DATA.get(cat))
+            Niw = WORD_DATA.get(word)[cat]
+            Niwbar = Ni - Niw
+            Nibar = N - Ni
+            Nibarw = Nw - Niw
+            Nibarwbar = Nibar - Nibarw
+
+            a = N * ((Niw * Nibarwbar - Niwbar * Nibarw) ** 2)
+            b = (Niw + Niwbar) * (Nibarw + Nibarwbar) * (Niw + Nibarw) * (Niwbar + Nibarwbar)
+            X = a / b
+            if word not in Xs.keys():
+                Xs[word] = {cat: X}
+            else:
+                Xs.get(word).update({cat: X})
+        s = 0
+        for cat in DATA.keys():
+            Ni = len(DATA.get(cat))
+            Pci = Ni / N
+            s += (Xs.get(word)[cat] * Pci)
+        score[word] = s
+    Xs = dict(map(lambda x: (x[0], (score[x[0]],
+                                    max(x[1].items(), key=operator.itemgetter(1)))), Xs.items()))
+    Xs = sorted(Xs.items(), key=lambda x: x[1][0], reverse=True)
+    with open("chi_square.txt", "w") as f:
+        cnt = 0
+        f.write("max class" + "\t\t" + "max class score" + "\t\t\t\t" + "score" + "\t\t\t\t\t\t" + "word\n")
+        while cnt < 100:
+            f.write(str(Xs[cnt][1][1][0]) + "\t\t\t" + str(Xs[cnt][1][1][1]) +
+                    "\t\t\t" + str(Xs[cnt][1][0]) + "\t\t\t" + Xs[cnt][0] + "\n")
+            cnt += 1
+        f.close()
 
 
 read_data()
 word_data()
 info_gain()
 mutual_info()
-# X_square()
+X_square()
