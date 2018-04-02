@@ -78,7 +78,7 @@ def info_gain():
     with open("info_gain.txt", "w") as f:
         cnt = 0
         while cnt < 100:
-            f.write(IGs[cnt][0] + "\t\t\t" + str(IGs[cnt][1]) + "\n")
+            f.write(str(IGs[cnt][1]) + "\t\t\t" + IGs[cnt][0] + "\n")
             cnt += 1
         f.close()
 
@@ -88,21 +88,40 @@ def mutual_info():
     N = 8600
     for word in WORD_DATA.keys():
         Nw = WORD_DATA.get(word)["all"]
-        Pw = Nw / N
+        Nwbar = N - Nw
         for cat in DATA.keys():
             Ni = len(DATA.get(cat))
             Niw = WORD_DATA.get(word)[cat]
+            Niwbar = Ni - Niw
+            Nibar = N - Ni
+            Nibarw = Nw - Niw
+            Nibarwbar = Nibar - Nibarw
+            a = 0.00000
+            b = 0.00000
+            c = 0.00000
+            d = 0.00000
             if Niw is not 0:
-                MI = math.log2(N*(Niw/N)/(Pw*Ni))
-            else:
-                MI = -1 * math.inf
+                a = (Niw/N) * math.log2((N*Niw)/(Nw*Ni))
+            if Niwbar is not 0:
+                b = (Niwbar/N) * math.log2((N*Niwbar)/(Nwbar*Ni))
+            if Nibarw is not 0:
+                c = (Nibarw/N) * math.log2((N*Nibarw)/(Nw*Nibar))
+            if Nibarwbar is not 0:
+                d = (Nibarwbar/N) * math.log2((N*Nibarwbar)/(Nwbar*Nibar))
+            MI = a + b + c + d
             if word not in MIs.keys():
                 MIs[word] = {cat: MI}
             else:
                 MIs.get(word).update({cat: MI})
     MIs = dict(map(lambda x: (x[0], max(x[1].items(), key=operator.itemgetter(1))), MIs.items()))
-    MIs = sorted(MIs.items(), key=lambda x: x[1][1], reverse=False)
-    pprint.pprint(MIs)
+    MIs = sorted(MIs.items(), key=lambda x: x[1][1], reverse=True)
+    with open("mutual_info.txt", "w") as f:
+        cnt = 0
+        while cnt < 100:
+            f.write(str(MIs[cnt][1][1]) + "\t\t\t" + MIs[cnt][1][0] + "\t\t\t" + MIs[cnt][0] + "\n")
+            cnt += 1
+        f.close()
+
 
 
 def X_square():
@@ -112,5 +131,5 @@ def X_square():
 read_data()
 word_data()
 info_gain()
-# mutual_info()
+mutual_info()
 # X_square()
