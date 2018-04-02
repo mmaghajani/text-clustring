@@ -86,6 +86,7 @@ def info_gain():
 def mutual_info():
     MIs = dict()
     N = 8600
+    score = dict()
     for word in WORD_DATA.keys():
         Nw = WORD_DATA.get(word)["all"]
         Nwbar = N - Nw
@@ -96,10 +97,10 @@ def mutual_info():
             Nibar = N - Ni
             Nibarw = Nw - Niw
             Nibarwbar = Nibar - Nibarw
-            a = 0.00000
-            b = 0.00000
-            c = 0.00000
-            d = 0.00000
+            a = 0.0000000000
+            b = 0.0000000000
+            c = 0.0000000000
+            d = 0.0000000000
             if Niw is not 0:
                 a = (Niw/N) * math.log2((N*Niw)/(Nw*Ni))
             if Niwbar is not 0:
@@ -109,16 +110,27 @@ def mutual_info():
             if Nibarwbar is not 0:
                 d = (Nibarwbar/N) * math.log2((N*Nibarwbar)/(Nwbar*Nibar))
             MI = a + b + c + d
+            if MI < 0.0001:
+                MI = MI
             if word not in MIs.keys():
                 MIs[word] = {cat: MI}
             else:
                 MIs.get(word).update({cat: MI})
-    MIs = dict(map(lambda x: (x[0], max(x[1].items(), key=operator.itemgetter(1))), MIs.items()))
-    MIs = sorted(MIs.items(), key=lambda x: x[1][1], reverse=True)
+        s = 0
+        for cat in DATA.keys():
+            Ni = len(DATA.get(cat))
+            Pci = Ni/N
+            s += (MIs.get(word)[cat] * Pci)
+        score[word] = s
+    MIs = dict(map(lambda x: (x[0], (score[x[0]],
+                                     max(x[1].items(), key=operator.itemgetter(1)))), MIs.items()))
+    MIs = sorted(MIs.items(), key=lambda x: x[1][0], reverse=True)
     with open("mutual_info.txt", "w") as f:
         cnt = 0
+        f.write("class" + "\t\t\t" + "max class" + "\t\t\t" + "score" + "\t\t\t" + "word\n")
         while cnt < 100:
-            f.write(str(MIs[cnt][1][1]) + "\t\t\t" + MIs[cnt][1][0] + "\t\t\t" + MIs[cnt][0] + "\n")
+            f.write(str(MIs[cnt][1][1][0]) + "\t\t\t" + str(MIs[cnt][1][1][1]) +
+                    "\t\t\t" + str(MIs[cnt][1][0]) + "\t\t\t" + MIs[cnt][0] + "\n")
             cnt += 1
         f.close()
 
