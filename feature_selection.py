@@ -1,8 +1,11 @@
 import operator
 import sys
 import pprint
-
+from sklearn import svm
+import numpy
+import scipy
 import math
+import random
 
 NUMBER_OF_LINE_IN_RAW_DATA = 8600
 DATA = dict()  # A dictionary of sets for each class
@@ -82,6 +85,7 @@ def info_gain():
             f.write(str(IGs[cnt][1]) + "\t\t\t" + IGs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(IGs[:100]).items()))
 
 
 def mutual_info():
@@ -132,6 +136,7 @@ def mutual_info():
                     "\t\t\t" + str(MIs[cnt][1][0]) + "\t\t\t" + MIs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(MIs[:100]).items()))
 
 
 def X_square():
@@ -172,10 +177,52 @@ def X_square():
                     "\t\t\t" + str(Xs[cnt][1][0]) + "\t\t\t" + Xs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(Xs[:100]).items()))
+
+
+def classify(features):
+    vectored_data = list()
+    for cat in DATA.keys():
+        for doc in DATA.get(cat):
+            vec = dict((el, 0) for el in features)
+            for word in doc.split(" "):
+                if word in vec.keys():
+                    vec[word] += 1
+            vec = dict(map(lambda x: (x[0], x[1] / 1), vec.items()))
+            vec["label"] = cat
+            vectored_data.append(list(vec.values()))
+    vectored_data = sorted(vectored_data, key=lambda k: random.random())
+    train = list(vectored_data[:8000])
+    test = list(vectored_data[8000:])
+    label = list(map(lambda x: x[-1:][0], train))
+    train = list(map(lambda x: x[:-1], train))
+    test_label = list(map(lambda x: x[-1:][0], test))
+    test = list(map(lambda x: x[:-1], test))
+    clf = svm.SVC()
+    clf.fit(train, label)
+    predicted_label = clf.predict(test)
+    cnt = 0
+
+    for i in range(0, 599):
+        if predicted_label[i] == test_label[i]:
+            cnt += 1
+    return cnt / 599
 
 
 read_data()
 word_data()
-info_gain()
-mutual_info()
-X_square()
+features1 = info_gain()
+features1.append("label")
+# print(features1)
+features2 = mutual_info()
+features2.append("label")
+# print(features2)
+features3 = X_square()
+features3.append("label")
+# print(features3)
+
+
+# ------------------------------- PART II --------------------------------- #
+print(classify(features1))
+print(classify(features2))
+print(classify(features3))
