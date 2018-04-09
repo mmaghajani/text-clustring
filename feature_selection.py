@@ -1,8 +1,11 @@
 import operator
-import sys
 import pprint
-
+from sklearn import svm
 import math
+import random
+import jupyter
+import matplotlib
+import sympy
 
 NUMBER_OF_LINE_IN_RAW_DATA = 8600
 DATA = dict()  # A dictionary of sets for each class
@@ -35,7 +38,7 @@ def word_data():
         for doc in docs:
             words = set(doc.split(" "))
             for word in words:
-                if word not in WORD_DATA:
+                if word not in WORD_DATA.keys():
                     a = domains[0]
                     b = domains[1]
                     c = domains[2]
@@ -46,6 +49,12 @@ def word_data():
                 else:
                     WORD_DATA[word][domain] += 1
                     WORD_DATA[word]["all"] += 1
+    while True:
+        try:
+            WORD_DATA.pop("")
+        except KeyError as e:
+            break
+    WORD_DATA.pop("\n")
 
 
 def info_gain():
@@ -75,13 +84,14 @@ def info_gain():
         Pwbar = Nwbar / N
         IGs[word] = -a + Pw * b + Pwbar * c
     IGs = sorted(IGs.items(), key=lambda x: x[1], reverse=True)
-    with open("info_gain.txt", "w") as f:
+    with open("info_gain.csv", "w") as f:
         cnt = 0
-        f.write("score" + "\t\t\t\t\t\t" + "word\n")
+        f.write("score" + "\t" + "word\n")
         while cnt < 100:
-            f.write(str(IGs[cnt][1]) + "\t\t\t" + IGs[cnt][0] + "\n")
+            f.write(str(IGs[cnt][1]) + "\t" + IGs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(IGs[:100]).items()))
 
 
 def mutual_info():
@@ -124,14 +134,15 @@ def mutual_info():
     MIs = dict(map(lambda x: (x[0], (score[x[0]],
                                      max(x[1].items(), key=operator.itemgetter(1)))), MIs.items()))
     MIs = sorted(MIs.items(), key=lambda x: x[1][0], reverse=True)
-    with open("mutual_info.txt", "w") as f:
+    with open("mutual_info.csv", "w") as f:
         cnt = 0
-        f.write("max class" + "\t\t" + "max class score" + "\t\t\t\t" + "score" + "\t\t\t\t\t\t" + "word\n")
+        f.write("max class" + "\t" + "max class score" + "\t" + "score" + "\t" + "word\n")
         while cnt < 100:
-            f.write(str(MIs[cnt][1][1][0]) + "\t\t\t" + str(MIs[cnt][1][1][1]) +
-                    "\t\t\t" + str(MIs[cnt][1][0]) + "\t\t\t" + MIs[cnt][0] + "\n")
+            f.write(str(MIs[cnt][1][1][0]) + "\t" + str(MIs[cnt][1][1][1]) +
+                    "\t" + str(MIs[cnt][1][0]) + "\t" + MIs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(MIs[:100]).items()))
 
 
 def X_square():
@@ -164,18 +175,102 @@ def X_square():
     Xs = dict(map(lambda x: (x[0], (score[x[0]],
                                     max(x[1].items(), key=operator.itemgetter(1)))), Xs.items()))
     Xs = sorted(Xs.items(), key=lambda x: x[1][0], reverse=True)
-    with open("chi_square.txt", "w") as f:
+    with open("chi_square.csv", "w") as f:
         cnt = 0
-        f.write("max class" + "\t\t" + "max class score" + "\t\t\t\t" + "score" + "\t\t\t\t\t\t" + "word\n")
+        f.write("max class" + "\t" + "max class score" + "\t" + "score" + "\t" + "word\n")
         while cnt < 100:
-            f.write(str(Xs[cnt][1][1][0]) + "\t\t\t" + str(Xs[cnt][1][1][1]) +
-                    "\t\t\t" + str(Xs[cnt][1][0]) + "\t\t\t" + Xs[cnt][0] + "\n")
+            f.write(str(Xs[cnt][1][1][0]) + "\t" + str(Xs[cnt][1][1][1]) +
+                    "\t" + str(Xs[cnt][1][0]) + "\t" + Xs[cnt][0] + "\n")
             cnt += 1
         f.close()
+    return list(map(lambda x: x[0], dict(Xs[:100]).items()))
+
+
+def get_frequency_words():
+    new_word_data = sorted(WORD_DATA.items(), key=lambda x: x[1]["all"], reverse=True)
+    return list(map(lambda x: x[0], dict(new_word_data[:1000]).items()))
+
+
+def classify(train, test):
+    train_label = list(map(lambda x: x[-1:][0], train))
+    final_train = list(map(lambda x: x[:-1], train))
+    test_label = list(map(lambda x: x[-1:][0], test))
+    final_test = list(map(lambda x: x[:-1], test))
+    clf = svm.LinearSVC(penalty='l1', loss='squared_hinge', dual=False, random_state=0)
+    clf.fit(final_train, train_label)
+    predicted_label = clf.predict(final_test)
+    cnt = 0
+
+    for i in range(0, len(predicted_label)-1):
+        if predicted_label[i] == test_label[i]:
+            cnt += 1
+
+    return cnt
+
+
+def cross_validation(k, features):
+    vectored_data = list()
+    for cat in DATA.keys():
+        for doc in DATA.get(cat):
+            vec = dict((el, 0) for el in features)
+            count = 0
+            for word in doc.split(" "):
+                if word in vec.keys():
+                    vec[word] += 1
+                    count += 1
+            if count == 0:
+                count = 1
+            vec = dict(map(lambda x: (x[0], x[1] / count), vec.items()))
+            vec["label"] = cat
+            vectored_data.append(list(vec.values()))
+    vectored_data = sorted(vectored_data, key=lambda k: random.random())
+
+    cnt = 0
+
+    x = NUMBER_OF_LINE_IN_RAW_DATA/k
+    for i in range(0, k):
+        train = list(vectored_data[:int(x*i)] +
+                     vectored_data[int(x*(i+1)):])
+        test = list(vectored_data[int(x*i): int(x*(i+1))])
+        cnt += classify(train, test)
+
+    return cnt / NUMBER_OF_LINE_IN_RAW_DATA
+
+
+def read_features(file_path):
+    cnt = 0
+    features = list()
+    with open(file_path) as fp:
+        line = "s"
+        while line:
+            line = fp.readline()
+            cnt += 1
+            features.append(line.strip())
+    return features
 
 
 read_data()
 word_data()
-info_gain()
-mutual_info()
-X_square()
+# features0 = get_frequency_words()
+features0 = read_features("1000.txt")
+# features0.append("label")
+# print(features0)
+features1 = read_features("infogain.txt")
+# features1 = info_gain()
+# features1.append("label")
+# print(features1)
+# features2 = mutual_info()
+features2 = read_features("mutual.txt")
+# features2.append("label")
+# print(features2)
+# features3 = X_square()
+features3 = read_features("chi.txt")
+# features3.append("label")
+# print(features3)
+
+
+# ------------------------------- PART II --------------------------------- #
+print(cross_validation(5, features0))
+print(cross_validation(5, features1))
+print(cross_validation(5, features2))
+print(cross_validation(5, features3))
