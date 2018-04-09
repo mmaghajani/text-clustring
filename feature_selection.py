@@ -1,11 +1,7 @@
 import operator
-import pprint
 from sklearn import svm
 import math
 import random
-import jupyter
-import matplotlib
-import sympy
 
 NUMBER_OF_LINE_IN_RAW_DATA = 8600
 DATA = dict()  # A dictionary of sets for each class
@@ -251,20 +247,20 @@ def read_features(file_path):
 
 read_data()
 word_data()
-# features0 = get_frequency_words()
-features0 = read_features("1000.txt")
+features0 = get_frequency_words()
+# features0 = read_features("1000.txt")
 # features0.append("label")
 # print(features0)
-features1 = read_features("infogain.txt")
-# features1 = info_gain()
+# features1 = read_features("infogain.txt")
+features1 = info_gain()
 # features1.append("label")
 # print(features1)
-# features2 = mutual_info()
-features2 = read_features("mutual.txt")
+features2 = mutual_info()
+# features2 = read_features("mutual.txt")
 # features2.append("label")
 # print(features2)
-# features3 = X_square()
-features3 = read_features("chi.txt")
+features3 = X_square()
+# features3 = read_features("chi.txt")
 # features3.append("label")
 # print(features3)
 
